@@ -28,6 +28,7 @@ use autodie qw(:all);
 
 our %needles;
 our %tags;
+our %unregistered;
 our $needledir;
 our $cleanuphandler;
 
@@ -114,10 +115,11 @@ sub save {
 }
 
 sub unregister {
-    my ($self) = @_;
+    my ($self, $reason) = @_;
     for my $g (@{$self->{tags}}) {
         @{$tags{$g}} = grep { $_ != $self } @{$tags{$g}};
         delete $tags{$g} unless (@{$tags{$g}});
+	$unregistered{$g}->{$self} = $reason;
     }
 }
 
@@ -208,19 +210,20 @@ sub init {
 }
 
 sub tags {
-    my @tags      = split(/ /, shift);
-    my $first_tag = shift @tags;
+    my ($wanted) = @_;
+    my @wanted      = split(/ /, $wanted);
+    my $first_tag = shift @wanted;
     my $goods     = $tags{$first_tag};
 
     # go out early if there is nothing to do
-    if (!$goods || !@tags) {
+    if (!$goods || !@wanted) {
         return $goods || [];
     }
     my @results;
 
     # now check that it contains all the other tags too
   NEEDLE: for my $n (@$goods) {
-        for my $t (@tags) {
+        for my $t (@wanted) {
             next NEEDLE if (!$n->has_tag($t));
         }
         print "adding ", $n->{name}, "\n";
